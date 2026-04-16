@@ -1,0 +1,11 @@
+#include "parent.h"
+
+Parent::Parent(const QString& n, const QString& t, int h, int he, int a0, int a1, int a2,
+               const QString& el, const QString& r, int m, int d)
+    : name(n), type(t), hp(h), health(he),
+    element(el), mana(m), rarity(r), damage(d)
+{
+    armor[0] = a0;
+    armor[1] = a1;
+    armor[2] = a2;
+}
