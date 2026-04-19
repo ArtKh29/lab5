@@ -7,15 +7,15 @@ class Parent
 {
 public:
     QString name;
-    QString type;        // "Маг" или "Враг"
+    QString type;
     int hp;
     int health;
     int armor[3] = {0, 0, 0};
 
-    QString element;     // для мага
+    QString element;
     int mana = 0;
 
-    QString rarity;      // для врага
+    QString rarity;
     int damage = 0;
 
     Parent() = default;
@@ -24,4 +24,4 @@ public:
            const QString& el = "", const QString& r = "", int m = 0, int d = 0);
 };
 
-#endif // PARENT_H
+#endif
