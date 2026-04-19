@@ -10,10 +10,14 @@ class CardDialog : public QDialog
 
 public:
     explicit CardDialog(const Parent& p, bool isMag, QWidget* parent = nullptr);
+    ~CardDialog();
+
+private slots:
+    void onPrintClicked();
 
 private:
-    const Parent& obj;
+    Parent obj;
     bool isMag;
 };
 
-#endif // CARDDIALOG_H
+#endif
