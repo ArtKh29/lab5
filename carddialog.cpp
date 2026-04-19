@@ -1,106 +1,196 @@
-// Copyright (C) 2016 The Qt Company Ltd.
-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
-// Qt-Security score:significant reason:default
+#include "carddialog.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QPushButton>
+#include <QPixmap>
+#include <QPrinter>
+#include <QPrintDialog>
+#include <QPainter>
+#include <QFont>
+#include <QFileInfo>
+#include <QCoreApplication>
+#include <QFile>
 
-#ifndef QBOXLAYOUT_H
-#define QBOXLAYOUT_H
-
-#include <QtWidgets/qtwidgetsglobal.h>
-#include <QtWidgets/qlayout.h>
-#ifdef QT_INCLUDE_COMPAT
-#include <QtWidgets/qwidget.h>
-#endif
-
-#include <limits.h>
-
-QT_BEGIN_NAMESPACE
-
-
-class QBoxLayoutPrivate;
-
-class Q_WIDGETS_EXPORT QBoxLayout : public QLayout
+CardDialog::CardDialog(const Parent& p, bool isMag, QWidget* parent)
+    : QDialog(parent), obj(p), isMag(isMag)
 {
-    Q_OBJECT
-    Q_DECLARE_PRIVATE(QBoxLayout)
-public:
-    enum Direction { LeftToRight, RightToLeft, TopToBottom, BottomToTop,
-                     Down = TopToBottom, Up = BottomToTop };
+    setWindowTitle(isMag ? "Карточка мага" : "Карточка врага");
+    setFixedSize(400, 650);
 
-    explicit QBoxLayout(Direction, QWidget *parent = nullptr);
+    auto* mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(20, 20, 20, 20);
+    mainLayout->setSpacing(12);
 
-    ~QBoxLayout();
+    auto* imageLabel = new QLabel(this);
+    imageLabel->setFixedSize(200, 200);
+    imageLabel->setAlignment(Qt::AlignCenter);
 
-    Direction direction() const;
-    void setDirection(Direction);
+    QString imagePath;
+    QString charName = p.name.toLower();
+    bool isApache = charName.contains("апач", Qt::CaseInsensitive) ||
+                    charName.contains("апац", Qt::CaseInsensitive);
 
-    void addSpacing(int size);
-    void addStretch(int stretch = 0);
-    void addSpacerItem(QSpacerItem *spacerItem);
-    void addWidget(QWidget *, int stretch = 0, Qt::Alignment alignment = Qt::Alignment());
-    void addLayout(QLayout *layout, int stretch = 0);
-    void addStrut(int);
-    void addItem(QLayoutItem *) override;
+    QString basePath = QCoreApplication::applicationDirPath();
+    QString imagesPath = basePath + "/images";
 
-    void insertSpacing(int index, int size);
-    void insertStretch(int index, int stretch = 0);
-    void insertSpacerItem(int index, QSpacerItem *spacerItem);
-    void insertWidget(int index, QWidget *widget, int stretch = 0, Qt::Alignment alignment = Qt::Alignment());
-    void insertLayout(int index, QLayout *layout, int stretch = 0);
-    void insertItem(int index, QLayoutItem *);
+    if (isApache) {
+        imagePath = imagesPath + "/апац.jpg";
+        if (!QFile::exists(imagePath)) imagePath = imagesPath + "/апач.png";
+    } else if (charName.contains("тагила", Qt::CaseInsensitive)) {
+        imagePath = imagesPath + "/тагила.jpg";
+        if (!QFile::exists(imagePath)) imagePath = imagesPath + "/тагила.png";
+    } else if (charName.contains("ультрамарин", Qt::CaseInsensitive)) {
+        imagePath = imagesPath + "/ультрамарин.jpg";
+        if (!QFile::exists(imagePath)) imagePath = imagesPath + "/ультрамарин.png";
+    }
 
-    int spacing() const override;
-    void setSpacing(int spacing) override;
+    QString nameColor = "#2c3e50";
 
-    bool setStretchFactor(QWidget *w, int stretch);
-    bool setStretchFactor(QLayout *l, int stretch);
-    void setStretch(int index, int stretch);
-    int stretch(int index) const;
+    if (isMag || isApache) {
+        if (p.element == "Огонь") { nameColor = "#e74c3c"; }
+        else if (p.element == "вода") { nameColor = "#3498db"; }
+    } else {
+        if (p.rarity == "Легенда" || p.rarity == "Легендарный") { nameColor = "#f1c40f"; }
+        else if (p.rarity == "Редкий") { nameColor = "#9b59b6"; }
+    }
 
-    QSize sizeHint() const override;
-    QSize minimumSize() const override;
-    QSize maximumSize() const override;
+    auto* nameValueLabel = new QLabel(p.name);
+    nameValueLabel->setAlignment(Qt::AlignCenter);
+    nameValueLabel->setStyleSheet("color: " + nameColor + "; font-size: 26px; font-weight: bold;");
+    mainLayout->addWidget(nameValueLabel);
 
-    bool hasHeightForWidth() const override;
-    int heightForWidth(int) const override;
-    int minimumHeightForWidth(int) const override;
+    mainLayout->addSpacing(10);
 
-    Qt::Orientations expandingDirections() const override;
-    void invalidate() override;
-    QLayoutItem *itemAt(int) const override;
-    QLayoutItem *takeAt(int) override;
-    int count() const override;
-    void setGeometry(const QRect&) override;
+    if (isMag || isApache) {
+        auto* statsRow = new QHBoxLayout;
+        statsRow->setSpacing(20);
 
-private:
-    Q_DISABLE_COPY(QBoxLayout)
-};
+        auto* hpContainer = new QVBoxLayout;
+        auto* hpLabel = new QLabel("ХП");
+        hpLabel->setAlignment(Qt::AlignCenter);
+        hpLabel->setStyleSheet("color: #27ae60; font-size: 16px; font-weight: bold;");
 
-class Q_WIDGETS_EXPORT QHBoxLayout : public QBoxLayout
+        auto* hpValueLabel = new QLabel(QString::number(p.hp));
+        hpValueLabel->setAlignment(Qt::AlignCenter);
+        hpValueLabel->setStyleSheet("color: #27ae60; font-size: 28px; font-weight: bold;");
+
+        hpContainer->addWidget(hpLabel);
+        hpContainer->addWidget(hpValueLabel);
+
+        auto* manaContainer = new QVBoxLayout;
+        auto* manaLabel = new QLabel("Мана");
+        manaLabel->setAlignment(Qt::AlignCenter);
+        manaLabel->setStyleSheet("color: #2980b9; font-size: 16px; font-weight: bold;");
+
+        auto* manaValueLabel = new QLabel(QString::number(p.mana));
+        manaValueLabel->setAlignment(Qt::AlignCenter);
+        manaValueLabel->setStyleSheet("color: #2980b9; font-size: 28px; font-weight: bold;");
+
+        manaContainer->addWidget(manaLabel);
+        manaContainer->addWidget(manaValueLabel);
+
+        statsRow->addStretch();
+        statsRow->addLayout(hpContainer);
+        statsRow->addSpacing(40);
+        statsRow->addLayout(manaContainer);
+        statsRow->addStretch();
+
+        mainLayout->addLayout(statsRow);
+    } else {
+        auto* hpLabel = new QLabel("ХП");
+        hpLabel->setAlignment(Qt::AlignCenter);
+        hpLabel->setStyleSheet("color: #27ae60; font-size: 16px; font-weight: bold;");
+        mainLayout->addWidget(hpLabel);
+
+        auto* hpValueLabel = new QLabel(QString::number(p.hp));
+        hpValueLabel->setAlignment(Qt::AlignCenter);
+        hpValueLabel->setStyleSheet("color: #27ae60; font-size: 28px; font-weight: bold;");
+        mainLayout->addWidget(hpValueLabel);
+    }
+
+    if (!isApache) {
+        mainLayout->addSpacing(10);
+
+        auto* armorLabel = new QLabel("Броня");
+        armorLabel->setAlignment(Qt::AlignCenter);
+        armorLabel->setStyleSheet("color: #95a5a6; font-size: 16px; font-weight: bold;");
+        mainLayout->addWidget(armorLabel);
+
+        auto* armorValueLabel = new QLabel(
+            QString("<%1/%2/%3>").arg(p.armor[0]).arg(p.armor[1]).arg(p.armor[2])
+            );
+        armorValueLabel->setAlignment(Qt::AlignCenter);
+        armorValueLabel->setStyleSheet("color: #95a5a6; font-size: 20px; font-weight: bold;");
+        mainLayout->addWidget(armorValueLabel);
+    }
+
+    mainLayout->addStretch();
+
+    auto* buttonsLayout = new QHBoxLayout;
+    buttonsLayout->setSpacing(15);
+    buttonsLayout->addStretch();
+
+    auto* printBtn = new QPushButton("Печать");
+    printBtn->setFixedSize(120, 50);
+    printBtn->setStyleSheet(
+        "QPushButton { background-color: #3498db; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; }"
+        "QPushButton:hover { background-color: #2980b9; }"
+        "QPushButton:pressed { background-color: #1a5276; }"
+        );
+    connect(printBtn, &QPushButton::clicked, this, &CardDialog::onPrintClicked);
+
+    auto* cancelBtn = new QPushButton("Отмена");
+    cancelBtn->setFixedSize(120, 50);
+    cancelBtn->setStyleSheet(
+        "QPushButton { background-color: #e74c3c; color: white; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; }"
+        "QPushButton:hover { background-color: #c0392b; }"
+        "QPushButton:pressed { background-color: #922b21; }"
+        );
+    connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
+
+    buttonsLayout->addWidget(printBtn);
+    buttonsLayout->addWidget(cancelBtn);
+    buttonsLayout->addStretch();
+
+    mainLayout->addLayout(buttonsLayout);
+}
+
+CardDialog::~CardDialog()
 {
-    Q_OBJECT
-public:
-    QHBoxLayout();
-    explicit QHBoxLayout(QWidget *parent);
-    ~QHBoxLayout();
+}
 
-
-private:
-    Q_DISABLE_COPY(QHBoxLayout)
-};
-
-class Q_WIDGETS_EXPORT QVBoxLayout : public QBoxLayout
+void CardDialog::onPrintClicked()
 {
-    Q_OBJECT
-public:
-    QVBoxLayout();
-    explicit QVBoxLayout(QWidget *parent);
-    ~QVBoxLayout();
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setPageSize(QPageSize::A4);
+    printer.setPageOrientation(QPageLayout::Portrait);
 
+    QPrintDialog printDialog(&printer, this);
+    if (printDialog.exec() == QDialog::Accepted) {
+        QPainter painter(&printer);
+        bool isApache = obj.name.toLower().contains("апач", Qt::CaseInsensitive) ||
+                        obj.name.toLower().contains("апац", Qt::CaseInsensitive);
 
-private:
-    Q_DISABLE_COPY(QVBoxLayout)
-};
+        painter.setFont(QFont("Arial", 26, QFont::Bold));
+        painter.setPen(Qt::black);
+        painter.drawText(150, 60, obj.name);
 
-QT_END_NAMESPACE
+        painter.setFont(QFont("Arial", 14));
+        int y = 100;
 
-#endif // QBOXLAYOUT_H
+        painter.drawText(150, y, "ХП: " + QString::number(obj.hp));
+        y += 30;
+
+        if (isMag || isApache) {
+            painter.drawText(150, y, "Мана: " + QString::number(obj.mana));
+            y += 30;
+        }
+
+        if (!isApache) {
+            painter.drawText(150, y, "Броня: <" + QString("%1/%2/%3").arg(obj.armor[0]).arg(obj.armor[1]).arg(obj.armor[2]) + ">");
+        }
+
+        painter.end();
+    }
+}
